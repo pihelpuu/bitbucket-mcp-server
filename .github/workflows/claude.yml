@@ -1,19 +1,30 @@
 name: Claude Code
 on:
+  # Auto-review on every PR push (from humans)
+  pull_request:
+    types: [opened, synchronize]
+  # React to Code Review bot's reviews and human reviews
+  pull_request_review:
+    types: [submitted]
+  # React to @claude mentions in comments
   issue_comment:
     types: [created]
   pull_request_review_comment:
     types: [created]
-  pull_request_review:
-    types: [submitted]
+
+# Prevent parallel runs on the same PR
+concurrency:
+  group: claude-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
   claude:
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+      (github.event_name == 'pull_request' && github.actor != 'github-actions[bot]') ||
+      (github.event_name == 'pull_request_review' && github.event.review.user.login != 'github-actions[bot]') ||
+      ((github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && contains(github.event.comment.body, '@claude'))
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
