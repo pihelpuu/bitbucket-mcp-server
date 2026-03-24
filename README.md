@@ -7,7 +7,7 @@ An MCP (Model Context Protocol) server that provides tools for interacting with 
 
 ## Features
 
-### Available Tools (29 total)
+### Available Tools (34 total)
 
 #### PR Core (`pr_core`)
 - `get_pull_request` - Full PR details including comments, file changes, and merge info
@@ -56,14 +56,21 @@ An MCP (Model Context Protocol) server that provides tools for interacting with 
 - `list_projects` - List all accessible Bitbucket projects/workspaces
 - `list_repositories` - List repositories in a project or across all accessible projects
 
+#### Repository Admin (`repo_admin`)
+- `create_repository` - Create a new repository in a workspace/project
+- `get_repository` - Get detailed repo info including size, language, default branch, and clone URLs
+- `update_repository` - Update repo settings (description, privacy, default branch, project)
+- `delete_repository` - Permanently delete a repository (cannot be undone!)
+- `create_branch` - Create a new branch from a source branch or commit
+
 ### Token Optimization
 
 v2.0.0 introduces significant token savings on every LLM request:
 
 | Configuration | Tools exposed | Est. tokens |
 |---|---|---|
-| Bitbucket Server (all groups) | 29 | ~5,100 |
-| Bitbucket Cloud (auto-filtered) | 21 | ~3,900 |
+| Bitbucket Server (all groups) | 34 | ~6,000 |
+| Bitbucket Cloud (auto-filtered) | 26 | ~4,800 |
 | Custom group preset (e.g. `pr_core,pr_review,files`) | 12 | ~2,100 |
 
 **Bitbucket Cloud** automatically hides the 10 server-only tools with no configuration needed.
