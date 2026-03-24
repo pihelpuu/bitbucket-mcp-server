@@ -119,7 +119,7 @@ export class BranchHandlers {
       );
     }
 
-    const { workspace, repository, branch_name, force } = args;
+    const { workspace, repository, branch_name } = args;
 
     try {
       let apiPath: string;
@@ -159,7 +159,7 @@ export class BranchHandlers {
         }
       } else {
         // Bitbucket Cloud API
-        apiPath = `/repositories/${workspace}/${repository}/refs/branches/${branch_name}`;
+        apiPath = `/repositories/${workspace}/${repository}/refs/branches/${encodeURIComponent(branch_name)}`;
         try {
           await this.apiClient.makeRequest<any>('delete', apiPath);
         } catch (deleteError: any) {

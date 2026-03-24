@@ -457,7 +457,6 @@ export const toolDefinitions: ToolDefinition[] = [
         workspace: W,
         repository: R,
         branch_name: { type: 'string', description: 'Branch name to delete' },
-        force: { type: 'boolean', description: 'Force delete even if not merged (default: false)' },
       },
       required: ['workspace', 'repository', 'branch_name'],
     },
@@ -663,6 +662,7 @@ export const toolDefinitions: ToolDefinition[] = [
       properties: {
         workspace: W,
         repository: R,
+        confirm: { type: 'boolean', description: 'Must be set to true to confirm deletion. This action cannot be undone!' },
       },
       required: ['workspace', 'repository'],
     },

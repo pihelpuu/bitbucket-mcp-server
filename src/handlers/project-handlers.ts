@@ -475,7 +475,19 @@ export class ProjectHandlers {
       );
     }
 
-    const { workspace, repository } = args;
+    const { workspace, repository, confirm } = args;
+
+    if (!confirm) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            error: `Deleting repository '${workspace}/${repository}' is a destructive action that cannot be undone. Please set confirm: true to proceed.`,
+          }, null, 2),
+        }],
+        isError: true,
+      };
+    }
 
     try {
       if (this.apiClient.getIsServer()) {
@@ -518,9 +530,22 @@ export class ProjectHandlers {
 
       if (this.apiClient.getIsServer()) {
         // Bitbucket Server: POST /rest/branch-utils/latest/projects/{key}/repos/{slug}/branches
+        let startPoint = source;
+        if (!startPoint) {
+          try {
+            const repoInfo = await this.apiClient.makeRequest<any>(
+              'get',
+              `/rest/api/1.0/projects/${workspace}/repos/${repository}/default-branch`
+            );
+            startPoint = repoInfo.id || 'refs/heads/main';  // e.g. "refs/heads/master"
+          } catch {
+            startPoint = 'refs/heads/main';
+          }
+        }
+
         const body: any = {
           name: branch_name,
-          startPoint: source || 'refs/heads/main',
+          startPoint,
         };
 
         result = await this.apiClient.makeRequest<any>(
@@ -543,10 +568,25 @@ export class ProjectHandlers {
         };
       } else {
         // Bitbucket Cloud: POST /repositories/{workspace}/{slug}/refs/branches
+        // Cloud API expects target.hash to be a commit SHA, not a branch name
+        let targetHash = source || 'main';
+        if (targetHash && !/^[0-9a-f]{40}$/i.test(targetHash)) {
+          // It's a branch name, resolve to hash
+          try {
+            const branchInfo = await this.apiClient.makeRequest<any>(
+              'get',
+              `/repositories/${workspace}/${repository}/refs/branches/${encodeURIComponent(targetHash)}`
+            );
+            targetHash = branchInfo.target?.hash || targetHash;
+          } catch {
+            // If branch lookup fails, try using the name directly (API might accept it)
+          }
+        }
+
         const body: any = {
           name: branch_name,
           target: {
-            hash: source || 'main',
+            hash: targetHash,
           },
         };
 

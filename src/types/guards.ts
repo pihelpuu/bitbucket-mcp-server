@@ -629,6 +629,7 @@ export const isDeleteRepositoryArgs = (
 ): args is {
   workspace: string;
   repository: string;
+  confirm?: boolean;
 } =>
   typeof args === 'object' &&
   args !== null &&
