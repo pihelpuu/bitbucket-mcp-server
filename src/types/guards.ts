@@ -565,3 +565,87 @@ export const isConvertPrItemArgs = (
   typeof args.pull_request_id === 'number' &&
   typeof args.id === 'number' &&
   (args.direction === 'to_task' || args.direction === 'to_comment');
+
+// Repo admin type guards
+export const isCreateRepositoryArgs = (
+  args: any
+): args is {
+  workspace: string;
+  repository: string;
+  description?: string;
+  is_private?: boolean;
+  project_key?: string;
+  default_branch?: string;
+  has_issues?: boolean;
+  has_wiki?: boolean;
+} =>
+  typeof args === 'object' &&
+  args !== null &&
+  typeof args.workspace === 'string' &&
+  typeof args.repository === 'string' &&
+  (args.description === undefined || typeof args.description === 'string') &&
+  (args.is_private === undefined || typeof args.is_private === 'boolean') &&
+  (args.project_key === undefined || typeof args.project_key === 'string') &&
+  (args.default_branch === undefined || typeof args.default_branch === 'string') &&
+  (args.has_issues === undefined || typeof args.has_issues === 'boolean') &&
+  (args.has_wiki === undefined || typeof args.has_wiki === 'boolean');
+
+export const isGetRepositoryArgs = (
+  args: any
+): args is {
+  workspace: string;
+  repository: string;
+} =>
+  typeof args === 'object' &&
+  args !== null &&
+  typeof args.workspace === 'string' &&
+  typeof args.repository === 'string';
+
+export const isUpdateRepositoryArgs = (
+  args: any
+): args is {
+  workspace: string;
+  repository: string;
+  description?: string;
+  is_private?: boolean;
+  project_key?: string;
+  default_branch?: string;
+  has_issues?: boolean;
+  has_wiki?: boolean;
+} =>
+  typeof args === 'object' &&
+  args !== null &&
+  typeof args.workspace === 'string' &&
+  typeof args.repository === 'string' &&
+  (args.description === undefined || typeof args.description === 'string') &&
+  (args.is_private === undefined || typeof args.is_private === 'boolean') &&
+  (args.project_key === undefined || typeof args.project_key === 'string') &&
+  (args.default_branch === undefined || typeof args.default_branch === 'string') &&
+  (args.has_issues === undefined || typeof args.has_issues === 'boolean') &&
+  (args.has_wiki === undefined || typeof args.has_wiki === 'boolean');
+
+export const isDeleteRepositoryArgs = (
+  args: any
+): args is {
+  workspace: string;
+  repository: string;
+} =>
+  typeof args === 'object' &&
+  args !== null &&
+  typeof args.workspace === 'string' &&
+  typeof args.repository === 'string';
+
+export const isCreateBranchArgs = (
+  args: any
+): args is {
+  workspace: string;
+  repository: string;
+  branch_name: string;
+  source?: string;
+} =>
+  typeof args === 'object' &&
+  args !== null &&
+  typeof args.workspace === 'string' &&
+  typeof args.repository === 'string' &&
+  typeof args.branch_name === 'string' &&
+  (args.source === undefined || typeof args.source === 'string');

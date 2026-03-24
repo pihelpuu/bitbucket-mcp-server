@@ -49,7 +49,7 @@ class BitbucketMCPServer {
     this.server = new Server(
       {
         name: 'bitbucket-mcp-server',
-        version: '2.0.1',
+        version: '2.1.0',
       },
       {
         capabilities: {
@@ -179,6 +179,18 @@ class BitbucketMCPServer {
           return this.projectHandlers.handleListProjects(request.params.arguments);
         case 'list_repositories':
           return this.projectHandlers.handleListRepositories(request.params.arguments);
+
+        // Repo admin tools
+        case 'create_repository':
+          return this.projectHandlers.handleCreateRepository(request.params.arguments);
+        case 'get_repository':
+          return this.projectHandlers.handleGetRepository(request.params.arguments);
+        case 'update_repository':
+          return this.projectHandlers.handleUpdateRepository(request.params.arguments);
+        case 'delete_repository':
+          return this.projectHandlers.handleDeleteRepository(request.params.arguments);
+        case 'create_branch':
+          return this.projectHandlers.handleCreateBranch(request.params.arguments);
 
         default:
           throw new McpError(

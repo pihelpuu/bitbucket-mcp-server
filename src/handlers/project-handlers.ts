@@ -2,7 +2,12 @@ import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { BitbucketApiClient } from '../utils/api-client.js';
 import {
   isListProjectsArgs,
-  isListRepositoriesArgs
+  isListRepositoriesArgs,
+  isCreateRepositoryArgs,
+  isGetRepositoryArgs,
+  isUpdateRepositoryArgs,
+  isDeleteRepositoryArgs,
+  isCreateBranchArgs
 } from '../types/guards.js';
 import {
   BitbucketServerProject,
@@ -231,6 +236,340 @@ export class ProjectHandlers {
       };
     } catch (error) {
       return this.apiClient.handleApiError(error, workspace ? `listing repositories in ${workspace}` : 'listing repositories');
+    }
+  }
+
+  async handleCreateRepository(args: any) {
+    if (!isCreateRepositoryArgs(args)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Invalid arguments for create_repository — workspace and repository (slug) are required'
+      );
+    }
+
+    const { workspace, repository, description, is_private = true, project_key, default_branch, has_issues, has_wiki } = args;
+
+    try {
+      let result: any;
+
+      if (this.apiClient.getIsServer()) {
+        // Bitbucket Server: POST /rest/api/1.0/projects/{key}/repos
+        const body: any = {
+          name: repository,
+          scmId: 'git',
+        };
+        if (description) body.description = description;
+        if (default_branch) body.defaultBranch = default_branch;
+        // Server repos in a project are not individually public/private — project controls that
+
+        result = await this.apiClient.makeRequest<any>(
+          'post',
+          `/rest/api/1.0/projects/${workspace}/repos`,
+          body
+        );
+
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              slug: result.slug,
+              name: result.name,
+              description: result.description || '',
+              project_key: result.project?.key,
+              state: result.state,
+              url: `${this.baseUrl}/projects/${result.project?.key}/repos/${result.slug}`,
+              clone_urls: (result.links?.clone || []).map((c: any) => ({ name: c.name, href: c.href })),
+            }, null, 2),
+          }],
+        };
+      } else {
+        // Bitbucket Cloud: POST /repositories/{workspace}/{slug}
+        const body: any = {
+          scm: 'git',
+          is_private: is_private,
+        };
+        if (description) body.description = description;
+        if (project_key) body.project = { key: project_key };
+        if (has_issues !== undefined) body.has_issues = has_issues;
+        if (has_wiki !== undefined) body.has_wiki = has_wiki;
+        if (default_branch) body.mainbranch = { type: 'branch', name: default_branch };
+
+        result = await this.apiClient.makeRequest<any>(
+          'post',
+          `/repositories/${workspace}/${repository}`,
+          body
+        );
+
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              slug: result.slug,
+              name: result.name,
+              full_name: result.full_name,
+              description: result.description || '',
+              is_private: result.is_private,
+              project_key: result.project?.key || '',
+              url: result.links?.html?.href || '',
+              clone_urls: (result.links?.clone || []).map((c: any) => ({ name: c.name, href: c.href })),
+            }, null, 2),
+          }],
+        };
+      }
+    } catch (error) {
+      return this.apiClient.handleApiError(error, `creating repository ${workspace}/${repository}`);
+    }
+  }
+
+  async handleGetRepository(args: any) {
+    if (!isGetRepositoryArgs(args)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Invalid arguments for get_repository — workspace and repository are required'
+      );
+    }
+
+    const { workspace, repository } = args;
+
+    try {
+      let result: any;
+
+      if (this.apiClient.getIsServer()) {
+        result = await this.apiClient.makeRequest<any>(
+          'get',
+          `/rest/api/1.0/projects/${workspace}/repos/${repository}`
+        );
+
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              slug: result.slug,
+              name: result.name,
+              description: result.description || '',
+              project_key: result.project?.key,
+              project_name: result.project?.name,
+              state: result.state,
+              is_public: result.public,
+              forkable: result.forkable,
+              scm: result.scmId,
+              url: `${this.baseUrl}/projects/${result.project?.key}/repos/${result.slug}`,
+              clone_urls: (result.links?.clone || []).map((c: any) => ({ name: c.name, href: c.href })),
+            }, null, 2),
+          }],
+        };
+      } else {
+        result = await this.apiClient.makeRequest<any>(
+          'get',
+          `/repositories/${workspace}/${repository}`
+        );
+
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              slug: result.slug,
+              name: result.name,
+              full_name: result.full_name,
+              description: result.description || '',
+              is_private: result.is_private,
+              project_key: result.project?.key || '',
+              project_name: result.project?.name || '',
+              language: result.language || '',
+              size: result.size,
+              default_branch: result.mainbranch?.name || '',
+              created_on: result.created_on,
+              updated_on: result.updated_on,
+              has_issues: result.has_issues,
+              has_wiki: result.has_wiki,
+              url: result.links?.html?.href || '',
+              clone_urls: (result.links?.clone || []).map((c: any) => ({ name: c.name, href: c.href })),
+            }, null, 2),
+          }],
+        };
+      }
+    } catch (error) {
+      return this.apiClient.handleApiError(error, `getting repository ${workspace}/${repository}`);
+    }
+  }
+
+  async handleUpdateRepository(args: any) {
+    if (!isUpdateRepositoryArgs(args)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Invalid arguments for update_repository — workspace and repository are required'
+      );
+    }
+
+    const { workspace, repository, description, is_private, project_key, default_branch, has_issues, has_wiki } = args;
+
+    try {
+      let result: any;
+
+      if (this.apiClient.getIsServer()) {
+        const body: any = {};
+        if (description !== undefined) body.description = description;
+        if (default_branch) body.defaultBranch = default_branch;
+
+        result = await this.apiClient.makeRequest<any>(
+          'put',
+          `/rest/api/1.0/projects/${workspace}/repos/${repository}`,
+          body
+        );
+
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              slug: result.slug,
+              name: result.name,
+              description: result.description || '',
+              project_key: result.project?.key,
+              state: result.state,
+              url: `${this.baseUrl}/projects/${result.project?.key}/repos/${result.slug}`,
+              message: 'Repository updated successfully',
+            }, null, 2),
+          }],
+        };
+      } else {
+        const body: any = {};
+        if (description !== undefined) body.description = description;
+        if (is_private !== undefined) body.is_private = is_private;
+        if (project_key) body.project = { key: project_key };
+        if (default_branch) body.mainbranch = { type: 'branch', name: default_branch };
+        if (has_issues !== undefined) body.has_issues = has_issues;
+        if (has_wiki !== undefined) body.has_wiki = has_wiki;
+
+        result = await this.apiClient.makeRequest<any>(
+          'put',
+          `/repositories/${workspace}/${repository}`,
+          body
+        );
+
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              slug: result.slug,
+              name: result.name,
+              full_name: result.full_name,
+              description: result.description || '',
+              is_private: result.is_private,
+              project_key: result.project?.key || '',
+              url: result.links?.html?.href || '',
+              message: 'Repository updated successfully',
+            }, null, 2),
+          }],
+        };
+      }
+    } catch (error) {
+      return this.apiClient.handleApiError(error, `updating repository ${workspace}/${repository}`);
+    }
+  }
+
+  async handleDeleteRepository(args: any) {
+    if (!isDeleteRepositoryArgs(args)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Invalid arguments for delete_repository — workspace and repository are required'
+      );
+    }
+
+    const { workspace, repository } = args;
+
+    try {
+      if (this.apiClient.getIsServer()) {
+        await this.apiClient.makeRequest<any>(
+          'delete',
+          `/rest/api/1.0/projects/${workspace}/repos/${repository}`
+        );
+      } else {
+        await this.apiClient.makeRequest<any>(
+          'delete',
+          `/repositories/${workspace}/${repository}`
+        );
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            message: `Repository ${workspace}/${repository} deleted successfully`,
+          }, null, 2),
+        }],
+      };
+    } catch (error) {
+      return this.apiClient.handleApiError(error, `deleting repository ${workspace}/${repository}`);
+    }
+  }
+
+  async handleCreateBranch(args: any) {
+    if (!isCreateBranchArgs(args)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Invalid arguments for create_branch — workspace, repository, and branch_name are required'
+      );
+    }
+
+    const { workspace, repository, branch_name, source } = args;
+
+    try {
+      let result: any;
+
+      if (this.apiClient.getIsServer()) {
+        // Bitbucket Server: POST /rest/branch-utils/latest/projects/{key}/repos/{slug}/branches
+        const body: any = {
+          name: branch_name,
+          startPoint: source || 'refs/heads/main',
+        };
+
+        result = await this.apiClient.makeRequest<any>(
+          'post',
+          `/rest/branch-utils/latest/projects/${workspace}/repos/${repository}/branches`,
+          body
+        );
+
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              name: result.displayId || branch_name,
+              id: result.id,
+              latest_commit: result.latestCommit,
+              url: `${this.baseUrl}/projects/${workspace}/repos/${repository}/browse?at=${encodeURIComponent(result.id || branch_name)}`,
+              message: `Branch '${branch_name}' created successfully`,
+            }, null, 2),
+          }],
+        };
+      } else {
+        // Bitbucket Cloud: POST /repositories/{workspace}/{slug}/refs/branches
+        const body: any = {
+          name: branch_name,
+          target: {
+            hash: source || 'main',
+          },
+        };
+
+        result = await this.apiClient.makeRequest<any>(
+          'post',
+          `/repositories/${workspace}/${repository}/refs/branches`,
+          body
+        );
+
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              name: result.name,
+              target_hash: result.target?.hash,
+              url: result.links?.html?.href || '',
+              message: `Branch '${branch_name}' created successfully`,
+            }, null, 2),
+          }],
+        };
+      }
+    } catch (error) {
+      return this.apiClient.handleApiError(error, `creating branch '${branch_name}' in ${workspace}/${repository}`);
     }
   }
 }

@@ -7,7 +7,8 @@ export type ToolGroup =
   | 'branches'
   | 'files'
   | 'search'
-  | 'discovery';
+  | 'discovery'
+  | 'repo_admin';
 
 export type ToolAvailability = 'both' | 'server_only';
 
@@ -594,6 +595,92 @@ export const toolDefinitions: ToolDefinition[] = [
         start: START,
       },
       required: [],
+    },
+  },
+
+  // ── REPO_ADMIN ────────────────────────────────────────────────────────────
+  {
+    name: 'create_repository',
+    description: 'Create a new repository in a workspace/project',
+    group: 'repo_admin',
+    availability: 'both',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspace: W,
+        repository: { type: 'string', description: 'Repository slug (lowercase, hyphens allowed, e.g., my-new-repo)' },
+        description: { type: 'string', description: 'Repository description (optional)' },
+        is_private: { type: 'boolean', description: 'Private repository (default: true)' },
+        project_key: { type: 'string', description: 'Project key to assign the repo to (optional, Cloud only)' },
+        default_branch: { type: 'string', description: 'Default branch name (optional, default: main)' },
+        has_issues: { type: 'boolean', description: 'Enable issue tracker (optional, Cloud only, default: false)' },
+        has_wiki: { type: 'boolean', description: 'Enable wiki (optional, Cloud only, default: false)' },
+      },
+      required: ['workspace', 'repository'],
+    },
+  },
+  {
+    name: 'get_repository',
+    description: 'Get detailed information about a repository including size, language, default branch, and clone URLs',
+    group: 'repo_admin',
+    availability: 'both',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspace: W,
+        repository: R,
+      },
+      required: ['workspace', 'repository'],
+    },
+  },
+  {
+    name: 'update_repository',
+    description: 'Update repository settings like description, privacy, default branch, or project assignment',
+    group: 'repo_admin',
+    availability: 'both',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspace: W,
+        repository: R,
+        description: { type: 'string', description: 'New description (optional)' },
+        is_private: { type: 'boolean', description: 'Set private/public (optional)' },
+        project_key: { type: 'string', description: 'Move to different project (optional, Cloud only)' },
+        default_branch: { type: 'string', description: 'Change default branch (optional)' },
+        has_issues: { type: 'boolean', description: 'Enable/disable issue tracker (optional, Cloud only)' },
+        has_wiki: { type: 'boolean', description: 'Enable/disable wiki (optional, Cloud only)' },
+      },
+      required: ['workspace', 'repository'],
+    },
+  },
+  {
+    name: 'delete_repository',
+    description: 'Permanently delete a repository. This action cannot be undone!',
+    group: 'repo_admin',
+    availability: 'both',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspace: W,
+        repository: R,
+      },
+      required: ['workspace', 'repository'],
+    },
+  },
+  {
+    name: 'create_branch',
+    description: 'Create a new branch from a source branch or commit',
+    group: 'repo_admin',
+    availability: 'both',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspace: W,
+        repository: R,
+        branch_name: { type: 'string', description: 'Name for the new branch' },
+        source: { type: 'string', description: 'Source branch name or commit hash (default: main/master)' },
+      },
+      required: ['workspace', 'repository', 'branch_name'],
     },
   },
 ];
