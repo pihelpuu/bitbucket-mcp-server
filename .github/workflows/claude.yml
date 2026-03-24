@@ -1,9 +1,9 @@
 name: Claude Code
 on:
-  # Auto-review on every PR push (from humans)
+  # Auto-review+fix on every PR push (from humans)
   pull_request:
     types: [opened, synchronize]
-  # React to Code Review bot's review
+  # React to Code Review bot's review — read comments, fix code
   pull_request_review:
     types: [submitted]
   # React to @claude mentions in comments
@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Auto-fix: triggered by PR push or review (no trigger phrase needed)
+  # Auto-fix: direct prompt mode — no trigger phrase needed
   auto-fix:
     if: |
       (github.event_name == 'pull_request' && github.actor != 'github-actions[bot]') ||
@@ -33,12 +33,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
 
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          trigger_phrase: ""
+          direct_prompt: |
+            Review this pull request. Read the diff, check for bugs, code quality
+            issues, and best practices. If you find issues that can be fixed:
+            1. Fix the code directly
+            2. Commit the changes with a descriptive message
+            3. Push the changes
+            If the code looks good, leave a brief approving comment on the PR.
+          claude_args: "--max-turns 10"
 
   # Interactive: triggered by @claude mentions in comments
   respond:
