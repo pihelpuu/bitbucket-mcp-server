@@ -1,25 +1,23 @@
 name: Claude Code
 on:
-  # Code Review (App) handles review on every push.
-  # Action only reacts to reviews and @claude mentions — no double review.
-  pull_request_review:
-    types: [submitted]
+  # Manual mode: responds to @claude mentions and Code Review findings
   issue_comment:
     types: [created]
   pull_request_review_comment:
     types: [created]
+  pull_request_review:
+    types: [submitted]
 
-# Prevent parallel runs on the same PR
 concurrency:
   group: claude-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
-  # Auto-fix: reads Code Review's findings and fixes them
-  auto-fix:
+  claude:
     if: |
-      github.event_name == 'pull_request_review' &&
-      github.event.review.user.login != 'github-actions[bot]'
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && github.event.review.user.login == 'claude[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -31,39 +29,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            A code review was submitted on this PR. Read the review comments
-            and inline comments carefully. Fix any issues that were raised:
-            1. Fix the code directly
-            2. Commit with a descriptive message
-            3. Push the changes
-            If no actionable issues were found, do nothing.
-          claude_args: "--max-turns 30"
-
-  # Interactive: triggered by @claude mentions in comments
-  respond:
-    if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
           ref: ${{ github.event.pull_request.head.ref || github.head_ref }}
 
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          trigger_phrase: "@claude"
+          prompt: |
+            If a code review was submitted, read the review comments and fix
+            any issues directly in the code. Commit and push the fixes.
+            If responding to a @claude mention, follow the instructions given.
+          claude_args: "--max-turns 30"
