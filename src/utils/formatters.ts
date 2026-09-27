@@ -104,7 +104,29 @@ export function formatCloudPRListItem(pr: BitbucketCloudPullRequest): any {
     destination_branch: pr.destination.branch.name,
     updated_on: new Date(pr.updated_on).toLocaleString(),
     web_url: pr.links.html.href,
-    reviewers: pr.reviewers.map(r => r.display_name),
+    // The Cloud list endpoint returns partial PRs without `reviewers`; omit the key rather than claim "no reviewers".
+    reviewers: pr.reviewers?.map(r => r.display_name),
+  };
+}
+
+// Open PR of a branch for get_branch (Cloud). Same partial list objects: reviewers/participants may be absent,
+// and then approval_status cannot be known — omit it instead of reporting everyone as pending.
+export function formatCloudBranchOpenPR(pr: any): any {
+  const hasApprovalData = Array.isArray(pr.reviewers) && Array.isArray(pr.participants);
+  return {
+    id: pr.id,
+    title: pr.title,
+    destination_branch: pr.destination.branch.name,
+    author: pr.author.display_name,
+    created_on: pr.created_on,
+    reviewers: pr.reviewers?.map((r: any) => r.display_name),
+    approval_status: hasApprovalData ? {
+      approved_by: pr.participants.filter((p: any) => p.approved).map((p: any) => p.user.display_name),
+      changes_requested_by: [], // Cloud doesn't have explicit "changes requested" status
+      pending: pr.reviewers.filter((r: any) => !pr.participants.find((p: any) => p.user.account_id === r.account_id && p.approved))
+        .map((r: any) => r.display_name)
+    } : undefined,
+    url: pr.links.html.href
   };
 }
 

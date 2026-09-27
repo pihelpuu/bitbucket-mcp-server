@@ -13,7 +13,7 @@ import {
   BitbucketCloudCommit,
   FormattedCommit
 } from '../types/bitbucket.js';
-import { formatServerCommit, formatCloudCommit } from '../utils/formatters.js';
+import { formatServerCommit, formatCloudCommit, formatCloudBranchOpenPR } from '../utils/formatters.js';
 
 export class BranchHandlers {
   constructor(
@@ -302,21 +302,7 @@ export class BranchHandlers {
           }
         });
 
-        openPRs = (prResponse.values || []).map((pr: any) => ({
-          id: pr.id,
-          title: pr.title,
-          destination_branch: pr.destination.branch.name,
-          author: pr.author.display_name,
-          created_on: pr.created_on,
-          reviewers: pr.reviewers.map((r: any) => r.display_name),
-          approval_status: {
-            approved_by: pr.participants.filter((p: any) => p.approved).map((p: any) => p.user.display_name),
-            changes_requested_by: [], // Cloud doesn't have explicit "changes requested" status
-            pending: pr.reviewers.filter((r: any) => !pr.participants.find((p: any) => p.user.account_id === r.account_id && p.approved))
-              .map((r: any) => r.display_name)
-          },
-          url: pr.links.html.href
-        }));
+        openPRs = (prResponse.values || []).map(formatCloudBranchOpenPR);
       }
 
       // Step 3: Optionally get merged PRs
